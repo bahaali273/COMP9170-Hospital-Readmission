@@ -1,0 +1,278 @@
+
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\hypersetup{
+    colorlinks=true,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+\title{Predicting 30-Day Hospital Readmissions
+Using Explainable Machine Learning:
+A Comparative Study}
+
+\author{
+\IEEEauthorblockN{
+Bahaa Al-Juboori\IEEEauthorrefmark{1},
+Shaaz E. Jahan\IEEEauthorrefmark{1},
+Jason Fakidis\IEEEauthorrefmark{1}
+}
+\IEEEauthorblockA{
+\IEEEauthorrefmark{1}
+British Columbia Institute of Technology\\
+Burnaby, BC, Canada
+}
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Hospital readmissions create significant challenges
+for healthcare systems. Identifying patients at risk
+of early readmission may support better discharge
+planning and follow-up care.
+
+This project proposes a comparative study of machine
+learning methods for predicting hospital readmission
+within 30 days using the Diabetes 130-US Hospitals
+dataset. We plan to compare Logistic Regression,
+Random Forest, XGBoost, and a Multi-Layer Perceptron
+(MLP) neural network.
+
+We will investigate the effects of data preprocessing,
+class imbalance, and model selection on predictive
+performance. Explainability techniques such as SHAP
+will be considered to identify influential predictors.
+The goal is to evaluate the trade-off between
+predictive performance and interpretability rather
+than assuming that more complex models are superior.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Hospital Readmission, Machine Learning,
+Healthcare Analytics, XGBoost, Neural Networks,
+Explainable AI, SHAP
+\end{IEEEkeywords}
+
+\section{Problem Definition and Motivation}
+
+Unplanned hospital readmissions can place additional
+pressure on healthcare resources and may indicate
+the need for improved post-discharge support.
+
+Our primary research question is:
+
+\textit{How do traditional machine learning methods
+and neural networks compare in predicting 30-day
+hospital readmissions among patients with diabetes?}
+
+We will also investigate whether explainability
+methods provide useful insights into model
+predictions.
+
+\section{Preliminary Literature Review}
+
+Strack et al.~\cite{strack2014} investigated factors
+associated with hospital readmission among patients
+with diabetes using a large collection of hospital
+encounters.
+
+Their work provides the basis for the dataset
+selected for this project.
+
+Class imbalance presents an additional challenge,
+because positive readmission cases may represent
+a minority of observations. Chawla et
+al.~\cite{chawla2002} introduced SMOTE, a widely
+used technique for addressing imbalanced
+classification datasets.
+
+Lundberg and Lee~\cite{lundberg2017} introduced
+SHAP, an approach for interpreting model
+predictions by estimating feature contributions.
+
+These works motivate our comparison of predictive
+models, imbalance-handling methods, and
+interpretability techniques.
+
+\section{Dataset}
+
+We plan to use the publicly available
+Diabetes 130-US Hospitals dataset from the
+UCI Machine Learning Repository.
+
+The dataset contains approximately 101,766
+hospital encounters collected between 1999
+and 2008.
+
+Potential predictors include:
+\begin{itemize}
+    \item Patient age group
+    \item Length of hospital stay
+    \item Previous inpatient and emergency visits
+    \item Number of diagnoses
+    \item Medication-related variables
+\end{itemize}
+
+We will define the binary target as:
+
+\begin{equation}
+y =
+\begin{cases}
+1, & \text{readmission within 30 days}\\
+0, & \text{otherwise}
+\end{cases}
+\end{equation}
+
+We will examine missing values, duplicate
+encounters, feature availability, and class
+distributions before training models.
+
+\section{Methods Under Study}
+
+We propose four supervised classification models:
+
+\begin{enumerate}
+    \item Logistic Regression as an interpretable
+    baseline.
+    \item Random Forest to capture nonlinear
+    relationships.
+    \item XGBoost for gradient-boosted decision trees.
+    \item Multi-Layer Perceptron (MLP) as a
+    neural-network comparison.
+\end{enumerate}
+
+All models will be evaluated using a consistent
+data partition and preprocessing protocol.
+
+Preprocessing will include appropriate missing-value
+treatment, categorical encoding, and feature scaling
+where required.
+
+To reduce leakage, preprocessing will be fitted
+only using training data. We will also investigate
+whether repeated encounters from the same patient
+require patient-level data splitting.
+
+\section{Evaluation Methodology}
+
+Because early readmissions may be relatively
+uncommon, classification accuracy alone will not
+be considered sufficient.
+
+We plan to report:
+\begin{itemize}
+    \item Precision and Recall
+    \item F1-score
+    \item ROC-AUC
+    \item Precision-Recall AUC
+    \item Confusion matrices
+\end{itemize}
+
+Class-weighting and resampling methods may be
+evaluated using training data only.
+
+For selected trained models, SHAP-based analysis
+will be considered to explore feature contributions.
+
+\section{Plan and Methodology}
+
+Our proposed development phases are:
+
+\begin{enumerate}
+    \item Data acquisition and exploratory analysis
+    \item Data cleaning and feature engineering
+    \item Baseline model development
+    \item Advanced machine learning experiments
+    \item Evaluation and error analysis
+    \item Model interpretation and final reporting
+\end{enumerate}
+
+All experiments will be documented with reproducible
+Python notebooks and version-controlled source code.
+
+\section{Team Organization}
+
+The proposed division of responsibilities is:
+
+\textbf{Bahaa Al-Juboori:}
+
+
+\textbf{Shaaz E. Jahan:}
+
+
+\textbf{Jason Fakidis:}
+
+
+\section{Reproducibility and Repository}
+
+Project materials will be maintained in a public
+GitHub repository, including documentation,
+Python notebooks, source code, and results.
+
+\noindent\url{
+https://github.com/bahaali273/COMP9170-Hospital-Readmission
+}
+
+Raw data will be obtained from the original
+UCI source rather than redistributed through
+the repository.
+
+\section{Expected Outcomes}
+
+We expect to produce a reproducible comparison
+of classification methods for early hospital
+readmission prediction.
+
+The final study will discuss predictive performance,
+class imbalance, model interpretability,
+methodological limitations, and potential risks
+associated with using historical clinical data.
+
+No experimental performance claims are made
+at the proposal stage.
+
+\begin{thebibliography}{00}
+
+\bibitem{strack2014}
+B. Strack et al.,
+``Impact of HbA1c Measurement on Hospital
+Readmission Rates: Analysis of 70,000
+Clinical Database Patient Records,''
+\textit{BioMed Research International},
+2014.
+
+\bibitem{chawla2002}
+N. V. Chawla et al.,
+``SMOTE: Synthetic Minority
+Over-sampling Technique,''
+\textit{Journal of Artificial
+Intelligence Research},
+vol. 16, pp. 321--357, 2002.
+
+\bibitem{lundberg2017}
+S. M. Lundberg and S.-I. Lee,
+``A Unified Approach to Interpreting
+Model Predictions,''
+in \textit{Advances in Neural Information
+Processing Systems}, 2017.
+
+\bibitem{uci}
+UCI Machine Learning Repository,
+``Diabetes 130-US Hospitals for Years
+1999--2008.''
+[Online]. Available:
+\url{https://archive.ics.uci.edu/dataset/296/}
+
+\end{thebibliography}
+
+\end{document}
