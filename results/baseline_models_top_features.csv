@@ -1,0 +1,11 @@
+,Logistic Regression,Random Forest,XGBoost
+1,discharge_group_Transferred,num_lab_procedures,discharge_group_Transferred
+2,n_meds_on,num_medications,discharge_group_Home
+3,discharge_group_Home,time_in_hospital,log1p_number_inpatient
+4,repaglinide_Down,age_mid,number_inpatient
+5,admission_type_Other,number_diagnoses,total_visits
+6,log1p_total_visits,num_procedures,diag_1_group_Circulatory
+7,diabetes_med,discharge_group_Transferred,diag_1_group_Musculoskeletal
+8,number_outpatient,discharge_group_Home,race_Hispanic
+9,number_inpatient,n_meds_on,payer_code_MC
+10,diag_1_group_Circulatory,gender_male,diabetes_med

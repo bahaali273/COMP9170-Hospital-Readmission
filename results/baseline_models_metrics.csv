@@ -1,0 +1,7 @@
+Model,Split,Threshold,PR-AUC,ROC-AUC,Precision,Recall,F1
+Logistic Regression,validation,0.54,0.1546,0.6432,0.1464,0.4691,0.2232
+Random Forest,validation,0.33,0.158,0.6531,0.1624,0.4253,0.2351
+XGBoost,validation,0.52,0.1547,0.6442,0.1523,0.4552,0.2282
+Logistic Regression,test,0.54,0.1493,0.6354,0.1462,0.4494,0.2207
+Random Forest,test,0.33,0.1568,0.6477,0.1583,0.4064,0.2278
+XGBoost,test,0.52,0.1567,0.642,0.1566,0.4598,0.2337
