@@ -141,6 +141,44 @@ try:
         "is not enabled yet."
     )
 
+
+    # Model inference sanity check (synthetic input only)
+    import numpy as np
+
+    st.subheader("Model Inference Sanity Check")
+
+    # Synthetic zero-valued feature vector.
+    # This is NOT a clinically valid patient record.
+    synthetic_input = pd.DataFrame(
+        np.zeros((1, len(rf_bundle["features"]))),
+        columns=rf_bundle["features"]
+    )
+
+    probabilities = rf_bundle["model"].predict_proba(
+        synthetic_input
+    )[0]
+
+    positive_idx = list(
+        rf_bundle["model"].classes_
+    ).index(1)
+
+    synthetic_probability = float(
+        probabilities[positive_idx]
+    )
+
+    assert np.isfinite(synthetic_probability)
+    assert 0.0 <= synthetic_probability <= 1.0
+
+    st.success("Model inference test passed!")
+    st.write("Output shape:", probabilities.shape)
+    st.write("Probability sum:", round(float(probabilities.sum()), 6))
+    st.caption(
+        "Synthetic input is used exclusively to verify model "
+        "execution. This output must not be interpreted as a "
+        "patient risk prediction."
+    )
+
+
 except Exception as error:
     st.error("Unable to load Random Forest model.")
     st.code(str(error))
