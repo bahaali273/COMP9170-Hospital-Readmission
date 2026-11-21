@@ -178,6 +178,47 @@ try:
         "patient risk prediction."
     )
 
+    
+    # -------------------------------------------
+    # Patient Prediction — Feature Schema
+    # -------------------------------------------
+
+    st.divider()
+    st.header("Patient Prediction — Feature Schema")
+
+    feature_names = rf_bundle["features"]
+
+    assert len(feature_names) == 133
+    assert len(set(feature_names)) == 133
+
+    feature_schema = pd.DataFrame({
+        "Feature Index": range(1, len(feature_names) + 1),
+        "Feature Name": feature_names
+    })
+
+    st.success("Feature schema verified successfully!")
+
+    st.write("Required input features:", len(feature_names))
+
+    with st.expander("View all 133 model features"):
+        st.dataframe(
+            feature_schema,
+            hide_index=True,
+            width="stretch"
+        )
+
+    st.download_button(
+        label="Download Feature Schema",
+        data=feature_schema.to_csv(index=False),
+        file_name="random_forest_feature_schema.csv",
+        mime="text/csv"
+    )
+
+    st.caption(
+        "The prediction form will be constructed using "
+        "the model's exact feature schema. "
+        "Patient predictions are not enabled yet."
+    )
 
 except Exception as error:
     st.error("Unable to load Random Forest model.")
