@@ -363,6 +363,50 @@ with tab_predict:
             value=0
         )
 
+        
+        st.subheader("Diagnosis Information")
+
+        diag_1 = st.text_input(
+            "Primary ICD-9 Diagnosis",
+            value="250.13"
+        )
+
+        diag_2 = st.text_input(
+            "Secondary ICD-9 Diagnosis",
+            value="428"
+        )
+
+        diag_3 = st.text_input(
+            "Third ICD-9 Diagnosis",
+            value="486"
+        )
+
+        st.subheader("Diabetes Medications")
+
+        medication_options = ["No", "Steady", "Up", "Down"]
+
+        metformin = st.selectbox(
+            "Metformin",
+            medication_options
+        )
+
+        insulin = st.selectbox(
+            "Insulin",
+            medication_options
+        )
+
+        glipizide = st.selectbox(
+            "Glipizide",
+            medication_options
+        )
+
+        st.caption(
+            "Additional medication fields will be "
+            "included after validating the complete "
+            "training medication list."
+        )
+
+
         submitted = st.form_submit_button(
             "Review Patient Information"
         )
@@ -380,6 +424,13 @@ with tab_predict:
             "number_outpatient": outpatient,
             "number_emergency": emergency,
             "number_inpatient": inpatient,
+            "diag_1": diag_1,
+            "diag_2": diag_2,
+            "diag_3": diag_3,
+            "metformin": metformin,
+            "insulin": insulin,
+            "glipizide": glipizide,
+
         }
 
         st.success("Patient information collected!")
