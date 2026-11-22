@@ -194,3 +194,48 @@ def add_diagnosis_features(patient_df: pd.DataFrame) -> pd.DataFrame:
         result[target] = result[source].map(icd9_group)
 
     return result
+
+
+def encode_model_features(
+    patient_df: pd.DataFrame,
+    nominal_columns: list[str],
+    feature_names: list[str]
+) -> pd.DataFrame:
+    """
+    Encode already-engineered features using the
+    same one-hot encoding convention as training.
+
+    Rare-category merging and medication filtering
+    must be applied before calling this function.
+    """
+    missing_columns = [
+        col for col in nominal_columns
+        if col not in patient_df.columns
+    ]
+
+    if missing_columns:
+        raise ValueError(
+            f"Missing categorical columns: {missing_columns}"
+        )
+
+    if len(feature_names) != len(set(feature_names)):
+        raise ValueError("Duplicate model feature names")
+
+    encoded = pd.get_dummies(
+        patient_df,
+        columns=nominal_columns,
+        dtype=int
+    )
+
+    # Retain the exact feature order expected by
+    # the trained Random Forest model.
+    encoded = encoded.reindex(
+        columns=feature_names,
+        fill_value=0
+    )
+
+    if encoded.isna().any().any():
+        raise ValueError("Encoded features contain missing values")
+
+    return encoded
+
