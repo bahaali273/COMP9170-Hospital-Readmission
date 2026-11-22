@@ -94,3 +94,44 @@ def add_demographic_features(patient_df: pd.DataFrame) -> pd.DataFrame:
 
     return result
 
+
+   
+def add_medication_features(
+    patient_df: pd.DataFrame,
+    medication_columns: list[str]
+) -> pd.DataFrame:
+    """
+    Reproduce medication count features from
+    the original preprocessing notebook.
+
+    Each medication status must be one of:
+    No, Steady, Up, Down.
+    """
+    result = patient_df.copy()
+
+    if not medication_columns:
+        raise ValueError("Medication column list cannot be empty")
+
+    valid_statuses = {"No", "Steady", "Up", "Down"}
+
+    for column in medication_columns:
+        if column not in result.columns:
+            raise ValueError(f"Missing medication: {column}")
+
+        if not result[column].isin(valid_statuses).all():
+            raise ValueError(
+                f"Invalid medication status in {column}"
+            )
+
+    # Number of medications being taken
+    result["n_meds_on"] = (
+        result[medication_columns] != "No"
+    ).sum(axis=1)
+
+    # Number of medications with changed doses
+    result["n_med_changes"] = (
+        result[medication_columns].isin(["Up", "Down"])
+    ).sum(axis=1)
+
+    return result
+
