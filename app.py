@@ -509,6 +509,43 @@ with tab_predict:
             "Patient received diabetes medication"
         )
 
+        # -------------------------------------------
+        # Remaining 15 Medication Inputs
+        # -------------------------------------------
+
+        remaining_medications = [
+            "nateglinide",
+            "chlorpropamide",
+            "acetohexamide",
+            "tolbutamide",
+            "acarbose",
+            "miglitol",
+            "troglitazone",
+            "tolazamide",
+            "examide",
+            "citoglipton",
+            "glyburide-metformin",
+            "glipizide-metformin",
+            "glimepiride-pioglitazone",
+            "metformin-rosiglitazone",
+            "metformin-pioglitazone",
+        ]
+
+        with st.expander("Other Diabetes Medications (15)"):
+            st.caption(
+                "Select the status of every medication. "
+                "No means the medication was not prescribed."
+            )
+
+            extra_medications = {}
+
+            for medication in remaining_medications:
+                extra_medications[medication] = st.selectbox(
+                    medication,
+                    ["No", "Steady", "Up", "Down"],
+                    key=f"extra_med_{medication}"
+                )
+
 
     if submitted:
         patient_info = {
@@ -545,6 +582,10 @@ with tab_predict:
             "med_change": int(med_change),
             "diabetes_med": int(diabetes_med),
         }
+        
+        # Include all additional medication responses
+        patient_info.update(extra_medications)
+
 
         st.success("Patient information collected!")
 
