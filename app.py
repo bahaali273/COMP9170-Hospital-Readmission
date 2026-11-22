@@ -585,7 +585,35 @@ with tab_predict:
         
         # Include all additional medication responses
         patient_info.update(extra_medications)
-        
+        from src.manual_prediction import manual_to_model_row
+
+st.subheader("Manual Random Forest Prediction")
+try:
+    manual_features = manual_to_model_row(
+        patient_info, list(rf_bundle["features"])
+    )
+    classes = list(rf_bundle["model"].classes_)
+    positive_idx = classes.index(1)
+    probability = float(
+        rf_bundle["model"].predict_proba(manual_features)[0, positive_idx]
+    )
+    threshold = float(rf_bundle["threshold"])
+    predicted_class = int(probability >= threshold)
+
+    st.success("Manual input converted into 133 model features.")
+    st.metric("Model readmission score", f"{probability:.2%}")
+    st.metric("Predicted class", predicted_class)
+    st.caption(
+        f"Threshold: {threshold:.2f}. Class 1 means the model flags "
+        "potential readmission within 30 days. Scores are uncalibrated."
+    )
+    st.warning(
+        "Research demo only; exact raw-to-model preprocessing parity "
+        "has not been independently validated. Not for clinical use."
+    )
+except (ValueError, TypeError, KeyError) as err:
+    st.error(f"Manual input cannot be used: {err}")
+
         # Step 121 — Verify all 23 medication columns
 
         from src.patient_preprocessing import add_medication_features
@@ -643,7 +671,7 @@ with tab_predict:
         )
 
         st.info(
-            "Prediction is disabled until all required "
+        
             "features and preprocessing rules are validated."
         )
 
