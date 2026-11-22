@@ -456,6 +456,123 @@ try:
     )
 
     
+    # -------------------------------------------
+    # Batch Prediction — Prepared Feature CSV
+    # -------------------------------------------
+
+    st.divider()
+    st.header("Hospital Readmission Prediction")
+
+    st.info(
+        "Research demonstration only. Upload prepared "
+        "133-feature data. Not for clinical decisions."
+    )
+
+    uploaded = st.file_uploader(
+        "Upload prepared patient features (CSV)",
+        type=["csv"],
+        key="prediction_csv"
+    )
+
+    if uploaded is not None:
+        try:
+            input_df = pd.read_csv(uploaded)
+            expected = rf_bundle["features"]
+
+            # Allow test CSVs containing the known label,
+            # but never use the label as a predictor.
+            X_input = input_df.drop(
+                columns=["readmit_30"],
+                errors="ignore"
+            )
+
+            missing = sorted(
+                set(expected) - set(X_input.columns)
+            )
+            extra = sorted(
+                set(X_input.columns) - set(expected)
+            )
+
+            if missing or extra:
+                raise ValueError(
+                    f"Missing features: {missing}\n"
+                    f"Unexpected columns: {extra}"
+                )
+
+            X_input = X_input.loc[:, expected]
+
+            if X_input.empty:
+                raise ValueError("CSV contains no records.")
+
+            if len(X_input) > 1000:
+                raise ValueError(
+                    "Upload at most 1000 records."
+                )
+
+            if not all(
+                pd.api.types.is_numeric_dtype(dtype)
+                for dtype in X_input.dtypes
+            ):
+                raise ValueError(
+                    "All features must be numeric."
+                )
+
+            values = X_input.to_numpy(dtype=float)
+
+            if not np.isfinite(values).all():
+                raise ValueError(
+                    "Features contain missing or "
+                    "infinite values."
+                )
+
+            st.success(
+                f"Validated {len(X_input)} records "
+                "with 133 features."
+            )
+
+            if st.button("Run Predictions"):
+                classes = list(
+                    rf_bundle["model"].classes_
+                )
+                positive_index = classes.index(1)
+
+                probabilities = (
+                    rf_bundle["model"]
+                    .predict_proba(X_input)[:, positive_index]
+                )
+
+                predictions = (
+                    probabilities >= rf_bundle["threshold"]
+                ).astype(int)
+
+                results_df = pd.DataFrame({
+                    "Readmission Probability": probabilities,
+                    "Predicted Class": predictions
+                })
+
+                st.dataframe(
+                    results_df,
+                    hide_index=True,
+                    width="stretch"
+                )
+
+                st.download_button(
+                    "Download Predictions",
+                    results_df.to_csv(index=False),
+                    file_name="readmission_predictions.csv",
+                    mime="text/csv"
+                )
+
+                st.caption(
+                    "Predictions use the model's "
+                    "validation-selected threshold. "
+                    "These scores are not calibrated "
+                    "clinical risk estimates."
+                )
+
+        except (ValueError, KeyError, TypeError) as error:
+            st.error(f"Invalid input: {error}")
+
 except Exception as error:
     st.error("Unable to load Random Forest model.")
     st.code(str(error))
