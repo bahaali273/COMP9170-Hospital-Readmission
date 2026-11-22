@@ -172,7 +172,7 @@ def icd9_group(code):
     if 580 <= value < 630 or value == 788:
         return "Genitourinary"
     if 140 <= value < 240:
-        return "Neoplasm"
+        return "Neoplasms"
 
     return "Other"
 
