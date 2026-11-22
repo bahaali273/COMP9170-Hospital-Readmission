@@ -393,6 +393,68 @@ try:
         "Synthetic ICD-9 examples verify diagnosis grouping. "
         "This is not a clinical diagnosis tool."
     )
+
+
+    # -------------------------------------------
+    # One-Hot Encoding Verification
+    # -------------------------------------------
+
+    from src.patient_preprocessing import encode_model_features
+
+    st.divider()
+    st.header("One-Hot Encoding Verification")
+
+    example_data = pd.DataFrame([
+        {
+            "age_mid": 65,
+            "race": "Caucasian",
+            "admission_type": "Emergency"
+        },
+        {
+            "age_mid": 35,
+            "race": "Asian",
+            "admission_type": "Elective"
+        }
+    ])
+
+    categorical_columns = [
+        "race",
+        "admission_type"
+    ]
+
+    expected_features = [
+        "age_mid",
+        "race_Asian",
+        "race_Caucasian",
+        "admission_type_Elective",
+        "admission_type_Emergency"
+    ]
+
+    encoded_data = encode_model_features(
+        example_data,
+        categorical_columns,
+        expected_features
+    )
+
+    assert encoded_data.columns.tolist() == expected_features
+    assert encoded_data.shape == (2, 5)
+    assert encoded_data["race_Caucasian"].tolist() == [1, 0]
+    assert encoded_data["admission_type_Emergency"].tolist() == [1, 0]
+
+    st.success("One-hot encoding test passed!")
+
+    st.dataframe(
+        encoded_data,
+        hide_index=True,
+        width="stretch"
+    )
+
+    st.caption(
+        "Synthetic test of categorical encoding and column "
+        "alignment. Full 133-feature preprocessing is not "
+        "yet validated."
+    )
+
     
 except Exception as error:
     st.error("Unable to load Random Forest model.")
