@@ -596,29 +596,25 @@ with tab_predict:
                 width="stretch"
             )
 
-        # Manual Random Forest prediction
+        
         st.subheader("Manual Random Forest Prediction")
 
         try:
+            import io
+            import joblib
+            from pathlib import Path
             from src.manual_prediction import manual_to_model_row
 
-            
-        # Load the trained Random Forest model
-        import io
-        import joblib
-        from pathlib import Path
+            model_parts = [
+                Path("models") / f"rf_model.part{i:02d}"
+                for i in range(1, 4)
+            ]
 
-        model_parts = [
-            Path("models") / f"rf_model.part{i:02d}"
-            for i in range(1, 4)
-        ]
+            model_bytes = b"".join(
+                part.read_bytes() for part in model_parts
+            )
 
-        model_bytes = b"".join(
-            part.read_bytes() for part in model_parts
-        )
-
-        st.subheader("Manual Random Forest Prediction")
-
+            rf_bundle = joblib.load(io.BytesIO(model_bytes))
 
             manual_features = manual_to_model_row(
                 patient_info,
@@ -636,42 +632,37 @@ with tab_predict:
             threshold = float(rf_bundle["threshold"])
             predicted_class = int(probability >= threshold)
 
-            st.success(
-                "Manual input converted into 133 model features."
-            )
+            st.success("Manual input processed successfully!")
 
             col1, col2 = st.columns(2)
 
-            with col1:
-                st.metric(
-                    "Model Readmission Score",
-                    f"{probability:.2%}"
-                )
+            col1.metric(
+                "Model Readmission Score",
+                f"{probability:.2%}"
+            )
 
-            with col2:
-                st.metric(
-                    "Predicted Class",
-                    predicted_class
-                )
+            col2.metric(
+                "Predicted Class",
+                predicted_class
+            )
 
             st.caption(
-                f"Classification threshold: {threshold:.2f}. "
-                "Class 1 indicates the model flags a possible "
-                "readmission within 30 days."
+                f"Classification threshold: {threshold:.2f}"
             )
 
             st.warning(
-                "Educational research demonstration only. "
-                "Scores are not calibrated clinical risk estimates. "
-                "Exact raw-to-model preprocessing parity remains "
-                "to be independently validated. "
-                "Not for clinical decisions."
+                "Research demonstration only. "
+                "Manual preprocessing has not been independently "
+                "validated against the original training pipeline. "
+                "Not for clinical use."
             )
 
-        except (ValueError, TypeError, KeyError, AttributeError) as err:
+        except Exception as err:
             st.error(
-                f"Manual prediction could not be completed: {err}"
+                f"Manual prediction failed: "
+                f"{type(err).__name__}: {err}"
             )
+
 
 
 with tab_methods:
