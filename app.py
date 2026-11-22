@@ -547,6 +547,7 @@ with tab_predict:
                 )
 
 
+   
     if submitted:
         patient_info = {
             "age": age,
@@ -582,47 +583,82 @@ with tab_predict:
             "med_change": int(med_change),
             "diabetes_med": int(diabetes_med),
         }
-        
+
         # Include all additional medication responses
         patient_info.update(extra_medications)
-        
-        from src.manual_prediction import manual_to_model_row
 
+        st.success("Patient information collected!")
+
+        with st.expander("Review Patient Information"):
+            st.dataframe(
+                pd.DataFrame([patient_info]),
+                hide_index=True,
+                width="stretch"
+            )
+
+        # Manual Random Forest prediction
         st.subheader("Manual Random Forest Prediction")
 
         try:
+            from src.manual_prediction import manual_to_model_row
+
             manual_features = manual_to_model_row(
-                patient_info, list(rf_bundle["features"])
+                patient_info,
+                list(rf_bundle["features"])
             )
 
-            classes = list(rf_bundle["model"].classes_)
+            model = rf_bundle["model"]
+            classes = list(model.classes_)
             positive_idx = classes.index(1)
 
             probability = float(
-                rf_bundle["model"].predict_proba(
-                    manual_features
-                )[0, positive_idx]
+                model.predict_proba(manual_features)[0, positive_idx]
             )
 
             threshold = float(rf_bundle["threshold"])
             predicted_class = int(probability >= threshold)
 
-            st.success("Manual input converted into 133 model features.")
-            st.metric("Model readmission score", f"{probability:.2%}")
-            st.metric("Predicted class", predicted_class)
-
-            st.warning(
-                "Research demonstration only. Predictions are not "
-                "validated for clinical use."
+            st.success(
+                "Manual input converted into 133 model features."
             )
 
-        except (ValueError, TypeError, KeyError) as err:
-            st.error(f"Manual input cannot be used: {err}")
+            col1, col2 = st.columns(2)
 
+            with col1:
+                st.metric(
+                    "Model Readmission Score",
+                    f"{probability:.2%}"
+                )
+
+            with col2:
+                st.metric(
+                    "Predicted Class",
+                    predicted_class
+                )
+
+            st.caption(
+                f"Classification threshold: {threshold:.2f}. "
+                "Class 1 indicates the model flags a possible "
+                "readmission within 30 days."
+            )
+
+            st.warning(
+                "Educational research demonstration only. "
+                "Scores are not calibrated clinical risk estimates. "
+                "Exact raw-to-model preprocessing parity remains "
+                "to be independently validated. "
+                "Not for clinical decisions."
+            )
+
+        except (ValueError, TypeError, KeyError, AttributeError) as err:
+            st.error(
+                f"Manual prediction could not be completed: {err}"
+            )
 
 
 with tab_methods:
     st.header("Research & Methodology")
+
     st.markdown(
         """
 **Research question.** How do traditional and advanced machine learning methods
@@ -645,12 +681,13 @@ every metric; it is used here to demonstrate reproducible batch inference.
 
 **Limitations.** The dataset is historical, class-imbalanced, and does not prove
 deployment suitability at a new hospital. Model scores may not be calibrated.
-The source data preprocessing pipeline must be reproduced exactly for any new
-input; the current interface accepts *already-prepared* features only. This
-prototype is not a clinical decision-support system.
+The manual input preprocessing path has not yet been independently validated
+against the original training pipeline. This prototype is not a clinical
+decision-support system.
 
-**Interpretability.** Feature importance analysis is part of the research;
-patient-level explanations are not yet implemented or validated.
+**Interpretability.** Global SHAP feature importance, beeswarm plots,
+and example patient-level waterfall explanations are included as research
+demonstrations. They are not causal or clinical conclusions.
 """
     )
 
