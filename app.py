@@ -260,7 +260,7 @@ with tab_predict:
         st.subheader(title)
 
         if image_path.is_file():
-            st.image(str(image_path), width="stretch")
+            st.image(str(image_path), width=650)
             st.caption(description)
         else:
             st.warning(f"Missing SHAP image: {filename}")
