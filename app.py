@@ -220,6 +220,58 @@ with tab_predict:
         with st.expander("Technical details"):
             st.code(str(exc))
 
+          
+    # -------------------------------------------
+    # SHAP Explainability Visualizations
+    # -------------------------------------------
+
+    st.divider()
+    st.header("SHAP Model Explainability")
+
+    st.write(
+        "SHAP explains how individual features contribute "
+        "to the Random Forest predictions. These are "
+        "model explanations, not causal or clinical conclusions."
+    )
+
+    shap_images = [
+        (
+            "Global SHAP Feature Importance",
+            "shap_importance.png",
+            "Mean absolute SHAP values across 100 test records."
+        ),
+        (
+            "SHAP Beeswarm",
+            "shap_beeswarm.png",
+            "Direction and magnitude of feature contributions "
+            "across the same 100 records."
+        ),
+        (
+            "Local SHAP — Example Patient",
+            "shap_waterfall_patient_1.png",
+            "Explanation of the first test record, "
+            "with predicted probability approximately 0.0983."
+        ),
+    ]
+
+    for title, filename, description in shap_images:
+        image_path = ROOT / "results" / filename
+
+        st.subheader(title)
+
+        if image_path.is_file():
+            st.image(str(image_path), width="stretch")
+            st.caption(description)
+        else:
+            st.warning(f"Missing SHAP image: {filename}")
+
+    st.info(
+        "SHAP plots are based on a fixed research sample. "
+        "The local waterfall explains the first test record, "
+        "not a newly uploaded patient."
+    )
+
+
 with tab_methods:
     st.header("Research & Methodology")
     st.markdown(
