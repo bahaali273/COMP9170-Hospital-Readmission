@@ -602,9 +602,27 @@ with tab_predict:
         try:
             from src.manual_prediction import manual_to_model_row
 
+            
+        # Load the trained Random Forest model
+        import io
+        import joblib
+        from pathlib import Path
+
+        model_parts = [
+            Path("models") / f"rf_model.part{i:02d}"
+            for i in range(1, 4)
+        ]
+
+        model_bytes = b"".join(
+            part.read_bytes() for part in model_parts
+        )
+
+        rf_bundle = joblib.load(io.BytesIO(model_bytes))
+
+
             manual_features = manual_to_model_row(
                 patient_info,
-                list(rf_bundle["features"])
+                list(rf_bundle["feature_names"])
             )
 
             model = rf_bundle["model"]
