@@ -344,13 +344,7 @@ try:
         "The full medication list and end-to-end preprocessing "
         "have not yet been validated."
     )
-
-except Exception as error:
-    st.error("Unable to load Random Forest model.")
-    st.code(str(error))
-
-
-    # -------------------------------------------
+        # -------------------------------------------
     # Diagnosis Preprocessing Verification
     # -------------------------------------------
 
@@ -399,4 +393,11 @@ except Exception as error:
         "Synthetic ICD-9 examples verify diagnosis grouping. "
         "This is not a clinical diagnosis tool."
     )
+    
+except Exception as error:
+    st.error("Unable to load Random Forest model.")
+    st.code(str(error))
+
+
+
 
