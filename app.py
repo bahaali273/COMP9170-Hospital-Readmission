@@ -1,582 +1,257 @@
+"""COMP 9170 — Hospital Readmission Research Dashboard.
 
-import streamlit as st
-import pandas as pd
+Run from the repository root: streamlit run app.py
+Prediction accepts *preprocessed* 133-feature CSVs only.
+"""
+
+import hashlib
+import io
 from pathlib import Path
 
-st.set_page_config(
-    page_title="Hospital Readmission Predictor",
-    page_icon="🏥",
-    layout="wide"
-)
-
-st.title("🏥 Hospital Readmission Predictor")
-st.caption("COMP 9170 — Data Science Research Project")
-
-st.info(
-    "Research and educational demonstration only. "
-    "Not intended for clinical decision-making."
-)
-
-st.header("Model Performance Comparison")
-
-metrics_path = Path("results/model_comparison_final.csv")
-
-if metrics_path.exists():
-    df = pd.read_csv(metrics_path)
-
-    st.dataframe(df, use_container_width=True)
-
-    st.subheader("PR-AUC Comparison")
-    st.bar_chart(
-        df.set_index("Model")[["PR-AUC"]]
-    )
-
-    st.caption(
-        "Results are based on the held-out test dataset. "
-        "Kumo-Tabular is excluded from this comparison."
-    )
-else:
-    st.error("Model comparison metrics file not found.")
-
-st.divider()
-st.write(
-    "Patient-level prediction and explainability "
-    "will be added after model deployment validation."
-)
-
-# -------------------------------------------
-# Random Forest Model Loading
-# -------------------------------------------
-
-import io
 import joblib
-import hashlib
+import numpy as np
+import pandas as pd
 import sklearn
-
-st.divider()
-st.header("Random Forest — Deployment Verification")
-
-MODEL_DIR = Path("models")
-
-MODEL_PARTS = [
-    MODEL_DIR / "rf_model.part01",
-    MODEL_DIR / "rf_model.part02",
-    MODEL_DIR / "rf_model.part03",
-]
+import streamlit as st
 
 
-@st.cache_resource
+ROOT = Path(__file__).resolve().parent
+RESULTS_PATH = ROOT / "results" / "model_comparison_final.csv"
+PARTS = [ROOT / "models" / f"rf_model.part{i:02d}" for i in range(1, 4)]
+MAX_ROWS = 1000
+EXPECTED_FEATURES = 133
+EXPECTED_THRESHOLD = 0.33
+
+st.set_page_config(
+    page_title="Hospital Readmission | COMP 9170",
+    page_icon="🏥",
+    layout="wide",
+)
+
+
+@st.cache_data(show_spinner=False)
+def load_comparison():
+    if not RESULTS_PATH.is_file():
+        raise FileNotFoundError(f"Missing comparison file: {RESULTS_PATH}")
+    df = pd.read_csv(RESULTS_PATH)
+    required = {"Model", "PR-AUC", "ROC-AUC", "Precision", "Recall", "F1"}
+    missing = required - set(df.columns)
+    if missing:
+        raise ValueError(f"Comparison CSV missing columns: {sorted(missing)}")
+    return df
+
+
+@st.cache_resource(show_spinner="Loading the Random Forest model…")
 def load_random_forest():
+    missing = [p.name for p in PARTS if not p.is_file()]
+    if missing:
+        raise FileNotFoundError(f"Missing model parts: {', '.join(missing)}")
 
-    # Confirm all model parts exist
-    for part in MODEL_PARTS:
-        if not part.exists():
-            raise FileNotFoundError(
-                f"Missing model part: {part}"
-            )
+    buffer = io.BytesIO()
+    digest = hashlib.sha256()
+    for path in PARTS:
+        data = path.read_bytes()
+        buffer.write(data)
+        digest.update(data)
+    buffer.seek(0)
 
-    # Reconstruct the original model in memory
-    model_bytes = bytearray()
-    sha256 = hashlib.sha256()
-
-    for part in MODEL_PARTS:
-        with open(part, "rb") as file:
-            data = file.read()
-            model_bytes.extend(data)
-            sha256.update(data)
-
-    # Load only our own trusted model artifact
-    bundle = joblib.load(
-        io.BytesIO(model_bytes)
-    )
-
+    # joblib loads Python pickle content; only load files from your trusted repository.
+    bundle = joblib.load(buffer)
     model = bundle["model"]
-    feature_names = bundle["feature_names"]
-    threshold = bundle["threshold"]
+    features = list(bundle["feature_names"])
+    threshold = float(bundle["threshold"])
 
-    if model.n_features_in_ != 133:
-        raise ValueError("Unexpected feature count")
-
-    if len(feature_names) != 133:
-        raise ValueError("Invalid feature list")
-
-    if abs(threshold - 0.33) > 1e-8:
-        raise ValueError("Unexpected threshold")
+    if len(features) != EXPECTED_FEATURES or len(set(features)) != EXPECTED_FEATURES:
+        raise ValueError("Model bundle contains an invalid 133-feature schema")
+    if model.n_features_in_ != EXPECTED_FEATURES:
+        raise ValueError("Model input feature count does not match the bundle")
+    if hasattr(model, "feature_names_in_") and list(model.feature_names_in_) != features:
+        raise ValueError("Model feature ordering does not match the saved schema")
+    if not np.isclose(threshold, EXPECTED_THRESHOLD, rtol=0, atol=1e-9):
+        raise ValueError("Unexpected classification threshold")
+    if 1 not in list(model.classes_):
+        raise ValueError("Model does not contain positive class 1")
 
     return {
         "model": model,
-        "features": feature_names,
+        "features": features,
         "threshold": threshold,
-        "sha256": sha256.hexdigest(),
-        "size_mb": len(model_bytes) / 1024**2,
+        "sha256": digest.hexdigest(),
+        "size_mb": buffer.getbuffer().nbytes / (1024 * 1024),
     }
 
 
-try:
-    rf_bundle = load_random_forest()
+def validate_uploaded_csv(uploaded, feature_names):
+    df = pd.read_csv(uploaded)
+    if df.empty:
+        raise ValueError("The CSV contains no records")
+    if len(df) > MAX_ROWS:
+        raise ValueError(f"Upload at most {MAX_ROWS:,} records (received {len(df):,})")
+    if not df.columns.is_unique:
+        raise ValueError("The CSV contains duplicate column names")
 
-    st.success("Random Forest model loaded successfully!")
+    # Labels may be present in previously prepared test data, but are NEVER predictors.
+    x = df.drop(columns=["readmit_30"], errors="ignore")
+    missing = sorted(set(feature_names) - set(x.columns))
+    extra = sorted(set(x.columns) - set(feature_names))
+    if missing or extra:
+        raise ValueError(f"Feature mismatch. Missing: {missing}; Unexpected: {extra}")
 
-    col1, col2, col3 = st.columns(3)
+    x = x.loc[:, feature_names]
+    for column in x.columns:
+        if not pd.api.types.is_numeric_dtype(x[column]):
+            raise ValueError(f"Non-numeric feature: {column}")
 
-    col1.metric(
-        "Input Features",
-        len(rf_bundle["features"])
-    )
+    values = x.to_numpy(dtype=float)
+    if not np.isfinite(values).all():
+        raise ValueError("CSV contains missing or infinite feature values")
 
-    col2.metric(
-        "Classification Threshold",
-        rf_bundle["threshold"]
-    )
-
-    col3.metric(
-        "Model Size",
-        f'{rf_bundle["size_mb"]:.2f} MB'
-    )
-
-    st.write("Scikit-learn version:", sklearn.__version__)
-
-    st.caption(
-        "Model loading verified. Patient prediction "
-        "is not enabled yet."
-    )
+    # Simple schema and data-quality checks; not a substitute for full preprocessing QA.
+    binary_columns = [c for c in feature_names if c.startswith((
+        "race_", "admission_type_", "discharge_group_", "admission_source_group_",
+        "medical_specialty_", "payer_code_", "diag_1_group_", "diag_2_group_",
+        "diag_3_group_",
+    ))]
+    # Keep medication dummies and other binary indicators in the separate training QA;
+    # the feature list alone does not identify every categorical source unambiguously.
+    for column in binary_columns:
+        if not np.isin(x[column].to_numpy(), [0, 1]).all():
+            raise ValueError(f"Invalid one-hot values in: {column}")
+    return x
 
 
-    # Model inference sanity check (synthetic input only)
-    import numpy as np
+st.title("🏥 Hospital Readmission Research Dashboard")
+st.caption("BCIT COMP 9170 · Predicting 30-day readmission using machine learning")
+st.info(
+    "Educational research demonstration. This app is not validated for clinical use. "
+    "Do not upload identifiable patient information."
+)
 
-    st.subheader("Model Inference Sanity Check")
+tab_compare, tab_predict, tab_methods = st.tabs([
+    "📊 Model Comparison", "🔍 Readmission Prediction", "📚 Research & Methodology"
+])
 
-    # Synthetic zero-valued feature vector.
-    # This is NOT a clinically valid patient record.
-    synthetic_input = pd.DataFrame(
-        np.zeros((1, len(rf_bundle["features"]))),
-        columns=rf_bundle["features"]
-    )
-
-    probabilities = rf_bundle["model"].predict_proba(
-        synthetic_input
-    )[0]
-
-    positive_idx = list(
-        rf_bundle["model"].classes_
-    ).index(1)
-
-    synthetic_probability = float(
-        probabilities[positive_idx]
-    )
-
-    assert np.isfinite(synthetic_probability)
-    assert 0.0 <= synthetic_probability <= 1.0
-
-    st.success("Model inference test passed!")
-    st.write("Output shape:", probabilities.shape)
-    st.write("Probability sum:", round(float(probabilities.sum()), 6))
-    st.caption(
-        "Synthetic input is used exclusively to verify model "
-        "execution. This output must not be interpreted as a "
-        "patient risk prediction."
-    )
-
-    
-    # -------------------------------------------
-    # Patient Prediction — Feature Schema
-    # -------------------------------------------
-
-    st.divider()
-    st.header("Patient Prediction — Feature Schema")
-
-    feature_names = rf_bundle["features"]
-
-    assert len(feature_names) == 133
-    assert len(set(feature_names)) == 133
-
-    feature_schema = pd.DataFrame({
-        "Feature Index": range(1, len(feature_names) + 1),
-        "Feature Name": feature_names
-    })
-
-    st.success("Feature schema verified successfully!")
-
-    st.write("Required input features:", len(feature_names))
-
-    with st.expander("View all 133 model features"):
-        st.dataframe(
-            feature_schema,
-            hide_index=True,
-            width="stretch"
+with tab_compare:
+    st.header("Held-Out Test Model Comparison")
+    try:
+        comparison = load_comparison()
+        st.dataframe(comparison, hide_index=True, width="stretch")
+        st.subheader("Precision–Recall AUC (PR-AUC)")
+        st.bar_chart(comparison.set_index("Model")[["PR-AUC"]], horizontal=True)
+        st.caption(
+            "Five models evaluated on the held-out test split. NVIDIA Kumo-Tabular "
+            "is excluded because it used different development samples. "
+            "Observed score differences have not been established as statistically significant."
         )
+        st.markdown(
+            "**Interpretation:** PR-AUC is especially informative because readmission "
+            "is uncommon (~8.97% of records). The regularized MLP had the highest "
+            "observed PR-AUC (0.1579); Random Forest had the highest ROC-AUC "
+            "(0.6477), and XGBoost the highest F1 (0.2337)."
+        )
+    except (OSError, ValueError) as exc:
+        st.error(f"Cannot display model comparison: {exc}")
 
-    st.download_button(
-        label="Download Feature Schema",
-        data=feature_schema.to_csv(index=False),
-        file_name="random_forest_feature_schema.csv",
-        mime="text/csv"
+with tab_predict:
+    st.header("Predict from Prepared Features")
+    st.write(
+        "Upload a CSV produced using the project's original preprocessing pipeline. "
+        f"Each row must contain exactly {EXPECTED_FEATURES} numeric model features. "
+        "The optional `readmit_30` label column is ignored during prediction."
     )
-
-    st.caption(
-        "The prediction form will be constructed using "
-        "the model's exact feature schema. "
-        "Patient predictions are not enabled yet."
+    st.warning(
+        "This interface does not convert raw clinical records into model features. "
+        "It cannot be used to assess real patients or make healthcare decisions."
     )
-
-
-    
-    # -------------------------------------------
-    # Visit Preprocessing Module Test
-    # -------------------------------------------
-
-    from src.patient_preprocessing import add_visit_features
-
-    st.divider()
-    st.header("Patient Preprocessing Verification")
-
-    example_patient = pd.DataFrame([{
-        "number_outpatient": 2,
-        "number_emergency": 1,
-        "number_inpatient": 3
-    }])
-
-    processed_patient = add_visit_features(example_patient)
-
-    assert processed_patient["total_visits"].iloc[0] == 6
-
-    assert np.isclose(
-        processed_patient["log1p_total_visits"].iloc[0],
-        np.log(7)
-    )
-
-    st.success("Patient preprocessing module test passed!")
-
-    st.dataframe(
-        processed_patient.round(4),
-        hide_index=True
-    )
-
-    st.caption(
-        "Synthetic example only. This verifies visit-related "
-        "feature engineering, not clinical prediction accuracy."
-    )
-
-
-    
-    # -------------------------------------------
-    # Demographic Preprocessing Verification
-    # -------------------------------------------
-
-    from src.patient_preprocessing import add_demographic_features
-
-    st.divider()
-    st.header("Demographic Preprocessing Verification")
-
-    example_demographics = pd.DataFrame([
-        {"age": "[60-70)", "gender": "Male"},
-        {"age": "[30-40)", "gender": "Female"}
-    ])
-
-    processed_demographics = add_demographic_features(
-        example_demographics
-    )
-
-    assert processed_demographics["age_mid"].tolist() == [65, 35]
-    assert processed_demographics["gender_male"].tolist() == [1, 0]
-
-    st.success("Demographic preprocessing test passed!")
-
-    st.dataframe(
-        processed_demographics,
-        hide_index=True,
-        width="stretch"
-    )
-
-    st.caption(
-        "Synthetic examples verify age and gender transformations. "
-        "Patient prediction remains disabled."
-    )
-
-    
-    # -------------------------------------------
-    # Medication Preprocessing Verification
-    # -------------------------------------------
-
-    from src.patient_preprocessing import add_medication_features
-
-    st.divider()
-    st.header("Medication Preprocessing Verification")
-
-    example_medications = pd.DataFrame([
-        {
-            "metformin": "Steady",
-            "insulin": "Up",
-            "glipizide": "No"
-        },
-        {
-            "metformin": "No",
-            "insulin": "Down",
-            "glipizide": "Steady"
-        }
-    ])
-
-    medication_columns = [
-        "metformin",
-        "insulin",
-        "glipizide"
-    ]
-
-    processed_medications = add_medication_features(
-        example_medications,
-        medication_columns
-    )
-
-    assert processed_medications["n_meds_on"].tolist() == [2, 2]
-    assert processed_medications["n_med_changes"].tolist() == [1, 1]
-
-    st.success("Medication preprocessing test passed!")
-
-    st.dataframe(
-        processed_medications,
-        hide_index=True,
-        width="stretch"
-    )
-
-    st.caption(
-        "Synthetic medication examples verify counting logic. "
-        "The full medication list and end-to-end preprocessing "
-        "have not yet been validated."
-    )
-        # -------------------------------------------
-    # Diagnosis Preprocessing Verification
-    # -------------------------------------------
-
-    from src.patient_preprocessing import add_diagnosis_features
-
-    st.divider()
-    st.header("Diagnosis Preprocessing Verification")
-
-    example_diagnoses = pd.DataFrame([
-        {
-            "diag_1": "250.13",
-            "diag_2": "428",
-            "diag_3": "486"
-        },
-        {
-            "diag_1": "715",
-            "diag_2": "V45",
-            "diag_3": None
-        }
-    ])
-
-    processed_diagnoses = add_diagnosis_features(
-        example_diagnoses
-    )
-
-    expected_groups = [
-        ["Diabetes", "Circulatory", "Respiratory"],
-        ["Musculoskeletal", "Other", "Missing"]
-    ]
-
-    actual_groups = processed_diagnoses[
-        ["diag_1_group", "diag_2_group", "diag_3_group"]
-    ].values.tolist()
-
-    assert actual_groups == expected_groups
-
-    st.success("Diagnosis preprocessing test passed!")
-
-    st.dataframe(
-        processed_diagnoses,
-        hide_index=True,
-        width="stretch"
-    )
-
-    st.caption(
-        "Synthetic ICD-9 examples verify diagnosis grouping. "
-        "This is not a clinical diagnosis tool."
-    )
-
-
-    # -------------------------------------------
-    # One-Hot Encoding Verification
-    # -------------------------------------------
-
-    from src.patient_preprocessing import encode_model_features
-
-    st.divider()
-    st.header("One-Hot Encoding Verification")
-
-    example_data = pd.DataFrame([
-        {
-            "age_mid": 65,
-            "race": "Caucasian",
-            "admission_type": "Emergency"
-        },
-        {
-            "age_mid": 35,
-            "race": "Asian",
-            "admission_type": "Elective"
-        }
-    ])
-
-    categorical_columns = [
-        "race",
-        "admission_type"
-    ]
-
-    expected_features = [
-        "age_mid",
-        "race_Asian",
-        "race_Caucasian",
-        "admission_type_Elective",
-        "admission_type_Emergency"
-    ]
-
-    encoded_data = encode_model_features(
-        example_data,
-        categorical_columns,
-        expected_features
-    )
-
-    assert encoded_data.columns.tolist() == expected_features
-    assert encoded_data.shape == (2, 5)
-    assert encoded_data["race_Caucasian"].tolist() == [1, 0]
-    assert encoded_data["admission_type_Emergency"].tolist() == [1, 0]
-
-    st.success("One-hot encoding test passed!")
-
-    st.dataframe(
-        encoded_data,
-        hide_index=True,
-        width="stretch"
-    )
-
-    st.caption(
-        "Synthetic test of categorical encoding and column "
-        "alignment. Full 133-feature preprocessing is not "
-        "yet validated."
-    )
-
-    
-    # -------------------------------------------
-    # Batch Prediction — Prepared Feature CSV
-    # -------------------------------------------
-
-    st.divider()
-    st.header("Hospital Readmission Prediction")
-
-    st.info(
-        "Research demonstration only. Upload prepared "
-        "133-feature data. Not for clinical decisions."
-    )
-
-    uploaded = st.file_uploader(
-        "Upload prepared patient features (CSV)",
-        type=["csv"],
-        key="prediction_csv"
-    )
-
-    if uploaded is not None:
-        try:
-            input_df = pd.read_csv(uploaded)
-            expected = rf_bundle["features"]
-
-            # Allow test CSVs containing the known label,
-            # but never use the label as a predictor.
-            X_input = input_df.drop(
-                columns=["readmit_30"],
-                errors="ignore"
+    try:
+        rf = load_random_forest()
+        col_a, col_b, col_c = st.columns(3)
+        col_a.metric("Model", "Random Forest")
+        col_b.metric("Features", len(rf["features"]))
+        col_c.metric("Classification threshold", f'{rf["threshold"]:.2f}')
+        with st.expander("Model deployment details"):
+            st.write(f"Model size: {rf['size_mb']:.2f} MiB")
+            st.write(f"Scikit-learn runtime: {sklearn.__version__}")
+            st.code(f"SHA-256 (computed, not externally verified): {rf['sha256']}")
+            st.caption("Model files should be trusted and their original checksum verified separately.")
+            st.download_button(
+                "Download feature schema",
+                pd.DataFrame({
+                    "Feature Index": range(1, len(rf["features"]) + 1),
+                    "Feature Name": rf["features"],
+                }).to_csv(index=False),
+                "random_forest_feature_schema.csv",
+                "text/csv",
             )
+        uploaded = st.file_uploader(
+            "Prepared feature CSV (up to 1,000 rows)",
+            type=["csv"],
+            key="prediction_csv",
+        )
+        if uploaded is not None:
+            try:
+                x = validate_uploaded_csv(uploaded, rf["features"])
+                st.success(f"Validated {len(x):,} rows with {x.shape[1]} features")
+                if st.button("Run Predictions", type="primary"):
+                    pos_idx = list(rf["model"].classes_).index(1)
+                    p = rf["model"].predict_proba(x)[:, pos_idx]
+                    prediction = (p >= rf["threshold"]).astype(int)
+                    output = pd.DataFrame({
+                        "Readmission Probability": p,
+                        "Predicted Class": prediction,
+                    })
+                    st.dataframe(output, hide_index=True, width="stretch")
+                    st.download_button(
+                        "Download predictions CSV",
+                        output.to_csv(index=False),
+                        "readmission_predictions.csv",
+                        "text/csv",
+                        key="download_predictions",
+                    )
+                    st.caption(
+                        "Class 1 indicates predicted readmission within 30 days at "
+                        "the validation-selected 0.33 threshold. Probabilities are not "
+                        "calibrated clinical risk estimates."
+                    )
+            except (ValueError, KeyError, TypeError, pd.errors.ParserError) as exc:
+                st.error(f"Invalid input: {exc}")
+    except Exception as exc:
+        st.error("The trained model could not be loaded. Check deployment and model-part files.")
+        with st.expander("Technical details"):
+            st.code(str(exc))
 
-            missing = sorted(
-                set(expected) - set(X_input.columns)
-            )
-            extra = sorted(
-                set(X_input.columns) - set(expected)
-            )
+with tab_methods:
+    st.header("Research & Methodology")
+    st.markdown(
+        """
+**Research question.** How do traditional and advanced machine learning methods
+compare when predicting 30-day readmission following hospital encounters?
 
-            if missing or extra:
-                raise ValueError(
-                    f"Missing features: {missing}\n"
-                    f"Unexpected columns: {extra}"
-                )
+**Dataset.** UCI Diabetes 130-US Hospitals (1999–2008). After cleaning and retaining
+one encounter per patient, the project uses 69,970 records. The held-out test set
+has 13,994 records and approximately 8.97% positive labels.
 
-            X_input = X_input.loc[:, expected]
+**Models evaluated.** Logistic Regression, Random Forest, XGBoost, regularized
+multilayer perceptron (MLP), and a patient-similarity GraphSAGE experiment.
 
-            if X_input.empty:
-                raise ValueError("CSV contains no records.")
+**Evaluation.** PR-AUC (primary comparison), ROC-AUC, precision, recall, and F1.
+Classification thresholds were selected on validation data and then applied to
+the held-out test set without test-based tuning.
 
-            if len(X_input) > 1000:
-                raise ValueError(
-                    "Upload at most 1000 records."
-                )
+**Model deployed.** Random Forest, with 500 trees and a validation-selected
+classification threshold of 0.33. It is not necessarily the best performer on
+every metric; it is used here to demonstrate reproducible batch inference.
 
-            if not all(
-                pd.api.types.is_numeric_dtype(dtype)
-                for dtype in X_input.dtypes
-            ):
-                raise ValueError(
-                    "All features must be numeric."
-                )
+**Limitations.** The dataset is historical, class-imbalanced, and does not prove
+deployment suitability at a new hospital. Model scores may not be calibrated.
+The source data preprocessing pipeline must be reproduced exactly for any new
+input; the current interface accepts *already-prepared* features only. This
+prototype is not a clinical decision-support system.
 
-            values = X_input.to_numpy(dtype=float)
+**Interpretability.** Feature importance analysis is part of the research;
+patient-level explanations are not yet implemented or validated.
+"""
+    )
 
-            if not np.isfinite(values).all():
-                raise ValueError(
-                    "Features contain missing or "
-                    "infinite values."
-                )
-
-            st.success(
-                f"Validated {len(X_input)} records "
-                "with 133 features."
-            )
-
-            if st.button("Run Predictions"):
-                classes = list(
-                    rf_bundle["model"].classes_
-                )
-                positive_index = classes.index(1)
-
-                probabilities = (
-                    rf_bundle["model"]
-                    .predict_proba(X_input)[:, positive_index]
-                )
-
-                predictions = (
-                    probabilities >= rf_bundle["threshold"]
-                ).astype(int)
-
-                results_df = pd.DataFrame({
-                    "Readmission Probability": probabilities,
-                    "Predicted Class": predictions
-                })
-
-                st.dataframe(
-                    results_df,
-                    hide_index=True,
-                    width="stretch"
-                )
-
-                st.download_button(
-                    "Download Predictions",
-                    results_df.to_csv(index=False),
-                    file_name="readmission_predictions.csv",
-                    mime="text/csv"
-                )
-
-                st.caption(
-                    "Predictions use the model's "
-                    "validation-selected threshold. "
-                    "These scores are not calibrated "
-                    "clinical risk estimates."
-                )
-
-        except (ValueError, KeyError, TypeError) as error:
-            st.error(f"Invalid input: {error}")
-
-except Exception as error:
-    st.error("Unable to load Random Forest model.")
-    st.code(str(error))
-
-
-
-
+st.divider()
+st.caption("COMP 9170 · Research prototype · No clinical use")
