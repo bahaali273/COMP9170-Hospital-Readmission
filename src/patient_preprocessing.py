@@ -54,3 +54,43 @@ def add_visit_features(patient_df: pd.DataFrame) -> pd.DataFrame:
         result[f"log1p_{column}"] = np.log1p(result[column])
 
     return result
+
+    
+def add_demographic_features(patient_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Reproduce Jason's age and gender feature engineering.
+
+    Required columns:
+    - age: original age interval, e.g. '[60-70)'
+    - gender: 'Male' or 'Female'
+    """
+    result = patient_df.copy()
+
+    required = ["age", "gender"]
+
+    for column in required:
+        if column not in result.columns:
+            raise ValueError(f"Missing required column: {column}")
+
+    # Age interval to midpoint
+    age_start = result["age"].str.extract(
+        r"\[(\d+)-"
+    )[0]
+
+    if age_start.isna().any():
+        raise ValueError("Invalid age interval")
+
+    result["age_mid"] = age_start.astype(int) + 5
+
+    # Gender to binary indicator
+    valid_genders = ["Male", "Female"]
+
+    if not result["gender"].isin(valid_genders).all():
+        raise ValueError("Gender must be Male or Female")
+
+    result["gender_male"] = (
+        result["gender"] == "Male"
+    ).astype(int)
+
+    return result
+
