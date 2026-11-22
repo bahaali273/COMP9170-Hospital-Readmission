@@ -135,3 +135,62 @@ def add_medication_features(
 
     return result
 
+
+def icd9_group(code):
+    """
+    Group an ICD-9 diagnosis code using the
+    original project's feature engineering rules.
+    """
+    if pd.isna(code):
+        return "Missing"
+
+    code = str(code).strip()
+
+    if not code or code == "?":
+        return "Missing"
+
+    if code[0].upper() in ("V", "E"):
+        return "Other"
+
+    try:
+        value = float(code)
+    except ValueError:
+        return "Other"
+
+    if 250 <= value < 251:
+        return "Diabetes"
+    if 390 <= value < 460 or value == 785:
+        return "Circulatory"
+    if 460 <= value < 520 or value == 786:
+        return "Respiratory"
+    if 520 <= value < 580 or value == 787:
+        return "Digestive"
+    if 800 <= value < 1000:
+        return "Injury"
+    if 710 <= value < 740:
+        return "Musculoskeletal"
+    if 580 <= value < 630 or value == 788:
+        return "Genitourinary"
+    if 140 <= value < 240:
+        return "Neoplasm"
+
+    return "Other"
+
+
+def add_diagnosis_features(patient_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Convert the three original diagnosis columns
+    into grouped categorical features.
+    """
+    result = patient_df.copy()
+
+    for i in (1, 2, 3):
+        source = f"diag_{i}"
+        target = f"diag_{i}_group"
+
+        if source not in result.columns:
+            raise ValueError(f"Missing diagnosis column: {source}")
+
+        result[target] = result[source].map(icd9_group)
+
+    return result
