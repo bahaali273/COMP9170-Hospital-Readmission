@@ -259,6 +259,42 @@ try:
     )
 
 
+    
+    # -------------------------------------------
+    # Demographic Preprocessing Verification
+    # -------------------------------------------
+
+    from src.patient_preprocessing import add_demographic_features
+
+    st.divider()
+    st.header("Demographic Preprocessing Verification")
+
+    example_demographics = pd.DataFrame([
+        {"age": "[60-70)", "gender": "Male"},
+        {"age": "[30-40)", "gender": "Female"}
+    ])
+
+    processed_demographics = add_demographic_features(
+        example_demographics
+    )
+
+    assert processed_demographics["age_mid"].tolist() == [65, 35]
+    assert processed_demographics["gender_male"].tolist() == [1, 0]
+
+    st.success("Demographic preprocessing test passed!")
+
+    st.dataframe(
+        processed_demographics,
+        hide_index=True,
+        width="stretch"
+    )
+
+    st.caption(
+        "Synthetic examples verify age and gender transformations. "
+        "Patient prediction remains disabled."
+    )
+
+
 except Exception as error:
     st.error("Unable to load Random Forest model.")
     st.code(str(error))
