@@ -220,6 +220,45 @@ try:
         "Patient predictions are not enabled yet."
     )
 
+
+    
+    # -------------------------------------------
+    # Visit Preprocessing Module Test
+    # -------------------------------------------
+
+    from src.patient_preprocessing import add_visit_features
+
+    st.divider()
+    st.header("Patient Preprocessing Verification")
+
+    example_patient = pd.DataFrame([{
+        "number_outpatient": 2,
+        "number_emergency": 1,
+        "number_inpatient": 3
+    }])
+
+    processed_patient = add_visit_features(example_patient)
+
+    assert processed_patient["total_visits"].iloc[0] == 6
+
+    assert np.isclose(
+        processed_patient["log1p_total_visits"].iloc[0],
+        np.log(7)
+    )
+
+    st.success("Patient preprocessing module test passed!")
+
+    st.dataframe(
+        processed_patient.round(4),
+        hide_index=True
+    )
+
+    st.caption(
+        "Synthetic example only. This verifies visit-related "
+        "feature engineering, not clinical prediction accuracy."
+    )
+
+
 except Exception as error:
     st.error("Unable to load Random Forest model.")
     st.code(str(error))
