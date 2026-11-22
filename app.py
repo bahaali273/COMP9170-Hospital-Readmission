@@ -430,6 +430,86 @@ with tab_predict:
             "Review Patient Information"
         )
 
+    
+        # -------------------------------------------
+        # Additional Clinical and Administrative Inputs
+        # -------------------------------------------
+
+        st.subheader("Additional Hospital Information")
+
+        medical_specialty = st.selectbox(
+            "Medical Specialty",
+            [
+                "Cardiology",
+                "Emergency/Trauma",
+                "Family/GeneralPractice",
+                "InternalMedicine",
+                "Nephrology",
+                "Orthopedics",
+                "Orthopedics-Reconstructive",
+                "Radiologist",
+                "Rare",
+                "Surgery-General",
+                "Unknown",
+            ],
+            index=10
+        )
+
+        payer_code = st.selectbox(
+            "Payer Code",
+            ["BC", "CM", "CP", "HM", "MC",
+             "MD", "Rare", "SP", "UN", "Unknown"],
+            index=9
+        )
+
+        max_glu_serum = st.selectbox(
+            "Maximum Glucose Serum Test",
+            ["Not measured", "Norm", ">200", ">300"]
+        )
+
+        A1Cresult = st.selectbox(
+            "A1C Test Result",
+            ["Not measured", "Norm", ">7", ">8"]
+        )
+
+        weight_recorded = st.checkbox(
+            "Patient weight was recorded",
+            value=False
+        )
+
+        st.subheader("Additional Diabetes Medications")
+
+        repaglinide = st.selectbox(
+            "Repaglinide", medication_options
+        )
+
+        glimepiride = st.selectbox(
+            "Glimepiride", medication_options
+        )
+
+        glyburide = st.selectbox(
+            "Glyburide", medication_options
+        )
+
+        pioglitazone = st.selectbox(
+            "Pioglitazone", medication_options
+        )
+
+        rosiglitazone = st.selectbox(
+            "Rosiglitazone", medication_options
+        )
+
+        st.subheader("Medication Treatment Information")
+
+        med_change = st.checkbox(
+            "Medication changed during hospitalization"
+        )
+
+        diabetes_med = st.checkbox(
+            "Patient received diabetes medication"
+        )
+
+
     if submitted:
         patient_info = {
             "age": age,
@@ -452,8 +532,18 @@ with tab_predict:
             "admission_type": admission_type,
             "discharge_group": discharge_group,
             "admission_source_group": admission_source_group,
-
-
+            "medical_specialty": medical_specialty,
+            "payer_code": payer_code,
+            "max_glu_serum": max_glu_serum,
+            "A1Cresult": A1Cresult,
+            "weight_recorded": int(weight_recorded),
+            "repaglinide": repaglinide,
+            "glimepiride": glimepiride,
+            "glyburide": glyburide,
+            "pioglitazone": pioglitazone,
+            "rosiglitazone": rosiglitazone,
+            "med_change": int(med_change),
+            "diabetes_med": int(diabetes_med),
         }
 
         st.success("Patient information collected!")
