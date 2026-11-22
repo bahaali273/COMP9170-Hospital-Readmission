@@ -272,6 +272,130 @@ with tab_predict:
     )
 
 
+    
+# -------------------------------------------
+# Manual Patient Input — Research Demo
+# -------------------------------------------
+
+with tab_predict:
+    st.divider()
+    st.header("Manual Patient Input")
+    st.caption(
+        "Enter synthetic patient information for a "
+        "research demonstration. Manual predictions "
+        "are not enabled until preprocessing is validated."
+    )
+
+    with st.form("manual_patient_form"):
+        st.subheader("Patient Demographics")
+
+        age = st.selectbox(
+            "Age Group",
+            [f"[{i}-{i+10})" for i in range(0, 100, 10)]
+        )
+
+        gender = st.selectbox(
+            "Gender",
+            ["Male", "Female"]
+        )
+
+        race = st.selectbox(
+            "Race",
+            [
+                "Caucasian",
+                "AfricanAmerican",
+                "Asian",
+                "Hispanic",
+                "Other"
+            ]
+        )
+
+        st.subheader("Hospital Visit Information")
+
+        time_in_hospital = st.number_input(
+            "Length of Hospital Stay (days)",
+            min_value=1,
+            max_value=14,
+            value=3
+        )
+
+        num_lab_procedures = st.number_input(
+            "Number of Lab Procedures",
+            min_value=0,
+            value=40
+        )
+
+        num_procedures = st.number_input(
+            "Number of Medical Procedures",
+            min_value=0,
+            value=1
+        )
+
+        num_medications = st.number_input(
+            "Number of Medications",
+            min_value=0,
+            value=10
+        )
+
+        number_diagnoses = st.number_input(
+            "Number of Diagnoses",
+            min_value=1,
+            value=5
+        )
+
+        st.subheader("Previous Hospital Visits")
+
+        outpatient = st.number_input(
+            "Previous Outpatient Visits",
+            min_value=0,
+            value=0
+        )
+
+        emergency = st.number_input(
+            "Previous Emergency Visits",
+            min_value=0,
+            value=0
+        )
+
+        inpatient = st.number_input(
+            "Previous Inpatient Visits",
+            min_value=0,
+            value=0
+        )
+
+        submitted = st.form_submit_button(
+            "Review Patient Information"
+        )
+
+    if submitted:
+        patient_info = {
+            "age": age,
+            "gender": gender,
+            "race": race,
+            "time_in_hospital": time_in_hospital,
+            "num_lab_procedures": num_lab_procedures,
+            "num_procedures": num_procedures,
+            "num_medications": num_medications,
+            "number_diagnoses": number_diagnoses,
+            "number_outpatient": outpatient,
+            "number_emergency": emergency,
+            "number_inpatient": inpatient,
+        }
+
+        st.success("Patient information collected!")
+
+        st.dataframe(
+            pd.DataFrame([patient_info]),
+            hide_index=True,
+            width="stretch"
+        )
+
+        st.info(
+            "Prediction is disabled until all required "
+            "features and preprocessing rules are validated."
+        )
+
+
 with tab_methods:
     st.header("Research & Methodology")
     st.markdown(
