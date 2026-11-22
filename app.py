@@ -617,7 +617,7 @@ with tab_predict:
             part.read_bytes() for part in model_parts
         )
 
-        rf_bundle = joblib.load(io.BytesIO(model_bytes))
+        st.subheader("Manual Random Forest Prediction")
 
 
             manual_features = manual_to_model_row(
