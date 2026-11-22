@@ -294,6 +294,56 @@ try:
         "Patient prediction remains disabled."
     )
 
+    
+    # -------------------------------------------
+    # Medication Preprocessing Verification
+    # -------------------------------------------
+
+    from src.patient_preprocessing import add_medication_features
+
+    st.divider()
+    st.header("Medication Preprocessing Verification")
+
+    example_medications = pd.DataFrame([
+        {
+            "metformin": "Steady",
+            "insulin": "Up",
+            "glipizide": "No"
+        },
+        {
+            "metformin": "No",
+            "insulin": "Down",
+            "glipizide": "Steady"
+        }
+    ])
+
+    medication_columns = [
+        "metformin",
+        "insulin",
+        "glipizide"
+    ]
+
+    processed_medications = add_medication_features(
+        example_medications,
+        medication_columns
+    )
+
+    assert processed_medications["n_meds_on"].tolist() == [2, 2]
+    assert processed_medications["n_med_changes"].tolist() == [1, 1]
+
+    st.success("Medication preprocessing test passed!")
+
+    st.dataframe(
+        processed_medications,
+        hide_index=True,
+        width="stretch"
+    )
+
+    st.caption(
+        "Synthetic medication examples verify counting logic. "
+        "The full medication list and end-to-end preprocessing "
+        "have not yet been validated."
+    )
 
 except Exception as error:
     st.error("Unable to load Random Forest model.")
