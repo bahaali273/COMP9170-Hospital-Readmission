@@ -348,3 +348,55 @@ try:
 except Exception as error:
     st.error("Unable to load Random Forest model.")
     st.code(str(error))
+
+
+    # -------------------------------------------
+    # Diagnosis Preprocessing Verification
+    # -------------------------------------------
+
+    from src.patient_preprocessing import add_diagnosis_features
+
+    st.divider()
+    st.header("Diagnosis Preprocessing Verification")
+
+    example_diagnoses = pd.DataFrame([
+        {
+            "diag_1": "250.13",
+            "diag_2": "428",
+            "diag_3": "486"
+        },
+        {
+            "diag_1": "715",
+            "diag_2": "V45",
+            "diag_3": None
+        }
+    ])
+
+    processed_diagnoses = add_diagnosis_features(
+        example_diagnoses
+    )
+
+    expected_groups = [
+        ["Diabetes", "Circulatory", "Respiratory"],
+        ["Musculoskeletal", "Other", "Missing"]
+    ]
+
+    actual_groups = processed_diagnoses[
+        ["diag_1_group", "diag_2_group", "diag_3_group"]
+    ].values.tolist()
+
+    assert actual_groups == expected_groups
+
+    st.success("Diagnosis preprocessing test passed!")
+
+    st.dataframe(
+        processed_diagnoses,
+        hide_index=True,
+        width="stretch"
+    )
+
+    st.caption(
+        "Synthetic ICD-9 examples verify diagnosis grouping. "
+        "This is not a clinical diagnosis tool."
+    )
+
