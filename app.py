@@ -406,6 +406,25 @@ with tab_predict:
             "training medication list."
         )
 
+        
+        # Hospital Admission Information
+        st.subheader("Hospital Admission Information")
+
+        admission_type = st.selectbox(
+            "Admission Type",
+            ["Emergency", "Urgent", "Elective", "Other"]
+        )
+
+        discharge_group = st.selectbox(
+            "Discharge Disposition",
+            ["Home", "Transferred", "Other", "Unknown"]
+        )
+
+        admission_source_group = st.selectbox(
+            "Admission Source",
+            ["Referral", "Transfer", "Other", "Emergency room"]
+        )
+
 
         submitted = st.form_submit_button(
             "Review Patient Information"
@@ -430,6 +449,10 @@ with tab_predict:
             "metformin": metformin,
             "insulin": insulin,
             "glipizide": glipizide,
+            "admission_type": admission_type,
+            "discharge_group": discharge_group,
+            "admission_source_group": admission_source_group,
+
 
         }
 
