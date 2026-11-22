@@ -616,8 +616,7 @@ except (ValueError, TypeError, KeyError) as err:
 
         # Step 121 — Verify all 23 medication columns
 
-        from src.patient_preprocessing import add_medication_features
-
+from src.patient_preprocessing import add_medication_features
         all_medications = [
             "metformin", "repaglinide", "nateglinide",
             "chlorpropamide", "glimepiride", "acetohexamide",
