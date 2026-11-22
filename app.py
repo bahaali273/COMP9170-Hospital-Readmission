@@ -585,6 +585,53 @@ with tab_predict:
         
         # Include all additional medication responses
         patient_info.update(extra_medications)
+        
+        # Step 121 — Verify all 23 medication columns
+
+        from src.patient_preprocessing import add_medication_features
+
+        all_medications = [
+            "metformin", "repaglinide", "nateglinide",
+            "chlorpropamide", "glimepiride", "acetohexamide",
+            "glipizide", "glyburide", "tolbutamide",
+            "pioglitazone", "rosiglitazone", "acarbose",
+            "miglitol", "troglitazone", "tolazamide",
+            "examide", "citoglipton", "insulin",
+            "glyburide-metformin", "glipizide-metformin",
+            "glimepiride-pioglitazone",
+            "metformin-rosiglitazone",
+            "metformin-pioglitazone"
+        ]
+
+        patient_df = pd.DataFrame([patient_info])
+
+        processed = add_medication_features(
+            patient_df, all_medications
+        )
+
+        st.subheader("Medication Feature Verification")
+
+        col1, col2, col3 = st.columns(3)
+
+        col1.metric("Medication Columns", len(all_medications))
+        col2.metric(
+            "Medications Taken",
+            int(processed["n_meds_on"].iloc[0])
+        )
+        col3.metric(
+            "Dose Changes",
+            int(processed["n_med_changes"].iloc[0])
+        )
+
+        st.success("All 23 medication columns processed!")
+
+        if patient_info["diabetes_med"] != int(
+            processed["n_meds_on"].iloc[0] > 0
+        ):
+            st.warning(
+                "Diabetes medication flag is inconsistent "
+                "with the selected medication statuses."
+            )
 
 
         st.success("Patient information collected!")
