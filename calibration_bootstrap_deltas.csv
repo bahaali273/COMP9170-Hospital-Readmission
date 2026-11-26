@@ -1,0 +1,13 @@
+Metric,Variant,DeltaMean,CI95_low,CI95_high,CI_excludes_0
+Brier,Sigmoid,-0.03389,-0.03585,-0.03191,True
+Brier,Isotonic,-0.03388,-0.03585,-0.0319,True
+LogLoss,Sigmoid,-0.10255,-0.10903,-0.09615,True
+LogLoss,Isotonic,-0.09996,-0.1071,-0.09284,True
+ECE,Sigmoid,-0.16792,-0.17386,-0.16133,True
+ECE,Isotonic,-0.16538,-0.17117,-0.1589,True
+PR_AUC,Sigmoid,0.0,0.0,0.0,False
+PR_AUC,Isotonic,-0.00589,-0.00829,-0.00377,True
+Precision,Sigmoid,0.00159,-0.00035,0.0033,False
+Precision,Isotonic,0.00031,-0.00133,0.00177,False
+Recall,Sigmoid,-0.00629,-0.01091,-0.00238,True
+Recall,Isotonic,-0.00472,-0.00924,-0.00155,True
