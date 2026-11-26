@@ -128,12 +128,11 @@ st.info(
 )
 
 
-tab_compare, tab_predict, tab_methods, tab_presentation = st.tabs(
+tab_compare, tab_predict, tab_methods = st.tabs(
     [
         "Model Comparison",
         "Readmission Prediction",
         "Research & Methodology",
-        "Final Presentation",
     ]
 )
 
