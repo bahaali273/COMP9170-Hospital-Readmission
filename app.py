@@ -807,6 +807,66 @@ with tab_presentation:
         """
     )
 
+    
+    st.divider()
+    st.subheader("Additional Experimental Analysis")
+
+    # Bootstrap confidence intervals
+    st.markdown("#### Model Performance Uncertainty")
+
+    bootstrap_fig = ROOT / "results" / "rf_bootstrap_confidence_intervals.png"
+    bootstrap_csv = ROOT / "results" / "rf_bootstrap_metrics.csv"
+
+    if bootstrap_fig.exists():
+        st.image(str(bootstrap_fig), width=650)
+
+    if bootstrap_csv.exists():
+        bootstrap_df = pd.read_csv(bootstrap_csv)
+        st.dataframe(
+            bootstrap_df.round(4),
+            hide_index=True
+        )
+
+    st.caption(
+        "Random Forest performance uncertainty estimated using "
+        "1,000 bootstrap resamples of the held-out test set."
+    )
+
+    # Calibration analysis
+    st.markdown("#### Probability Calibration & Reliability")
+
+    calibration_fig = ROOT / "results" / "reliability_diagram.png"
+    calibration_csv = ROOT / "results" / "calibration_metrics.csv"
+
+    if calibration_fig.exists():
+        st.image(str(calibration_fig), width=650)
+
+    if calibration_csv.exists():
+        calibration_df = pd.read_csv(
+            calibration_csv,
+            index_col=0
+        )
+
+        columns = [
+            "Brier", "LogLoss", "ECE", "PR_AUC", "ROC_AUC"
+        ]
+
+        available_columns = [
+            c for c in columns if c in calibration_df.columns
+        ]
+
+        st.dataframe(
+            calibration_df[available_columns].round(4)
+        )
+
+    st.info(
+        "Probability calibration improves agreement between "
+        "predicted and observed readmission frequencies in this "
+        "evaluation, without improving discrimination. "
+        "These results do not establish clinical validity."
+    )
+
+
     st.success(
         "Live demonstration: Open the Readmission Prediction tab "
         "to show the existing Random Forest interface."
