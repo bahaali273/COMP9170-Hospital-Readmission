@@ -127,15 +127,14 @@ st.info(
     "Do not upload identifiable patient information."
 )
 
-
-tab_compare, tab_predict, tab_methods = st.tabs(
+tab_compare, tab_predict, tab_methods, tab_presentation = st.tabs(
     [
         "Model Comparison",
         "Readmission Prediction",
         "Research & Methodology",
+        "Final Presentation",
     ]
 )
-
 
 with tab_compare:
     st.header("Held-Out Test Model Comparison")
@@ -704,6 +703,173 @@ decision-support system.
 and example patient-level waterfall explanations are included as research
 demonstrations. They are not causal or clinical conclusions.
 """
+    )
+
+
+
+with tab_presentation:
+    st.header("Final Project Presentation")
+    st.caption("COMP 9170 | Hospital Readmission Prediction")
+
+    st.info(
+        "10-minute research presentation | "
+        "Machine Learning and Explainable AI"
+    )
+
+    st.subheader("1. Problem & Motivation")
+    st.markdown(
+        """
+        **Research question:** How do different machine learning
+        approaches compare when predicting 30-day hospital readmission?
+
+        Hospital readmission prediction is an important healthcare
+        machine learning problem. Our project compares traditional
+        and advanced models using historical hospital data.
+        """
+    )
+
+    st.subheader("2. Dataset & Preprocessing")
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric("Cleaned Patients", "69,970")
+    col2.metric("Test Records", "13,994")
+    col3.metric("Model Features", "133")
+
+    st.markdown(
+        """
+        **Dataset:** UCI Diabetes 130-US Hospitals (1999–2008).
+
+        We retained one encounter per patient and applied feature
+        engineering to create the model inputs.
+
+        **Important:** Final documentation must establish the exact
+        encounter-selection rule, exclusions, and prediction time.
+        """
+    )
+
+    st.subheader("3. Methods")
+
+    st.markdown(
+        """
+        **Models investigated:**
+        - Logistic Regression
+        - Random Forest
+        - XGBoost
+        - Multilayer Perceptron (MLP)
+        - GraphSAGE
+
+        **Primary evaluation metric:** PR-AUC.
+
+        We also examined ROC-AUC, precision, recall, F1,
+        and model interpretability using SHAP.
+        """
+    )
+
+    st.subheader("4. Results & Evaluation")
+
+    try:
+        comparison = load_comparison()
+        st.dataframe(comparison, hide_index=True)
+    except Exception as err:
+        st.warning(f"Model comparison unavailable: {err}")
+
+    st.markdown(
+        """
+        **Additional analyses:**
+        - Global SHAP feature importance
+        - SHAP beeswarm analysis
+        - Individual patient waterfall explanations
+        - Probability calibration and reliability analysis
+        - Bootstrap confidence intervals, once verified
+        """
+    )
+
+    st.subheader("5. Conclusions & Limitations")
+
+    st.markdown(
+        """
+        This research demonstrates how multiple machine learning
+        approaches can be evaluated for 30-day hospital readmission
+        prediction.
+
+        **Limitations:**
+        - Historical US hospital data
+        - Class imbalance
+        - Limited generalizability to other hospitals
+        - Model scores require calibration assessment
+        - SHAP explanations are not evidence of causality
+        - Manual patient predictions require independent
+          preprocessing validation
+
+        **Future work:** External validation using a suitable,
+        independently obtained hospital dataset.
+        """
+    )
+
+    
+    st.divider()
+    st.subheader("Additional Experimental Analysis")
+
+    # Bootstrap confidence intervals
+    st.markdown("#### Model Performance Uncertainty")
+
+    bootstrap_fig = ROOT / "results" / "rf_bootstrap_confidence_intervals.png"
+    bootstrap_csv = ROOT / "results" / "rf_bootstrap_metrics.csv"
+
+    if bootstrap_fig.exists():
+        st.image(str(bootstrap_fig), width=650)
+
+    if bootstrap_csv.exists():
+        bootstrap_df = pd.read_csv(bootstrap_csv)
+        st.dataframe(
+            bootstrap_df.round(4),
+            hide_index=True
+        )
+
+    st.caption(
+        "Random Forest performance uncertainty estimated using "
+        "1,000 bootstrap resamples of the held-out test set."
+    )
+
+    # Calibration analysis
+    st.markdown("#### Probability Calibration & Reliability")
+
+    calibration_fig = ROOT / "results" / "reliability_diagram.png"
+    calibration_csv = ROOT / "results" / "calibration_metrics.csv"
+
+    if calibration_fig.exists():
+        st.image(str(calibration_fig), width=650)
+
+    if calibration_csv.exists():
+        calibration_df = pd.read_csv(
+            calibration_csv,
+            index_col=0
+        )
+
+        columns = [
+            "Brier", "LogLoss", "ECE", "PR_AUC", "ROC_AUC"
+        ]
+
+        available_columns = [
+            c for c in columns if c in calibration_df.columns
+        ]
+
+        st.dataframe(
+            calibration_df[available_columns].round(4)
+        )
+
+    st.info(
+        "Probability calibration improves agreement between "
+        "predicted and observed readmission frequencies in this "
+        "evaluation, without improving discrimination. "
+        "These results do not establish clinical validity."
+    )
+
+
+    st.success(
+        "Live demonstration: Open the Readmission Prediction tab "
+        "to show the existing Random Forest interface."
     )
 
 
